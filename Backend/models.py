@@ -1,24 +1,27 @@
 from config import database
 from datetime import datetime, time
+from flask_login import UserMixin
+import enum
 
-class User(database.Model):
-    __tablename__ = 'user'
+class User(database.Model, UserMixin):
+    __tablename__ = 'users'
     id = database.Column(database.Integer, primary_key=True)
-    firstName = database.Column(database.String, nullable = False)
-    lastName = database.Column(database.String, nullable = False)
-    email = database.Column(database.String, unique = True, nullable = False)
-    passwordHash = database.Column(database.Integer, nullable = False)
-    streetAddress = database.Column(database.String, nullable = False)
-    city = database.Column(database.String, nullable = False)
-    state = database.Column(database.String, nullable = False)
-    country = database.Column(database.String, nullable = False)
-    zipCode = database.Column(database.Integer, nullable = False)
+    username = database.Column(database.String(50),nullable = False,unique = True)
+    passwordHash = database.Column(database.String(256), nullable = False)
+    firstName = database.Column(database.String(50), nullable = False)
+    lastName = database.Column(database.String(50), nullable = False)
+    email = database.Column(database.String(50), unique = True, nullable = False)
+    streetAddress = database.Column(database.String(100), nullable = False)
+    city = database.Column(database.String(50), nullable = False)
+    state = database.Column(database.String(50), nullable = False)
+    country = database.Column(database.String(50), nullable = False)
+    zipCode = database.Column(database.Integer(50), nullable = False)
     latitude = database.Column(database.Double, nullable = False)
     longitude = database.Column(database.Double, nullable = False)
     
     def to_json(self):
         return{
-            "id":self.id,
+            "username": self.username,
             "firstName": self.firstName,
             "lastName": self.lastName,
             "email": self.email,
@@ -33,12 +36,12 @@ class User(database.Model):
         }
     
 class Venue(database.Model):
-    __tablename__ = 'venue'
+    __tablename__ = 'venues'
     id = database.Column(database.Integer, primary_key=True)
-    streetAddress = database.Column(database.String, nullable = False)
-    city = database.Column(database.String, nullable = False)
-    state = database.Column(database.String, nullable = False)
-    country = database.Column(database.String, nullable = False)
+    streetAddress = database.Column(database.String(100), nullable = False)
+    city = database.Column(database.String(50), nullable = False)
+    state = database.Column(database.String(50), nullable = False)
+    country = database.Column(database.String(50), nullable = False)
     zipCode = database.Column(database.Integer, nullable = False)
     latitude = database.Column(database.Double, nullable = False)
     longitude = database.Column(database.Double, nullable = False)
@@ -46,7 +49,6 @@ class Venue(database.Model):
 
     def to_json(self):
         return{
-            "id":self.id,
             "streetAddress": self.streetAddress,
             "city": self.city,
             "state": self.state,
@@ -56,21 +58,29 @@ class Venue(database.Model):
             "longitude": self.longitude
         }
 
+class EventRole(enum.IntEnum):
+    STAND-UP_SHOW = 1
+    IMPROV_SHOW = 2
+    OPEN_MIC = 3
+
 class Events(database.Model):
     __tablename__ = 'events'
     id = database.Column(database.Integer, primary_key=True)
-    name = database.Column(database.String, nullable = False)
-    description = database.Column(database.String, nullable = False)
-    category = database.Column(database.String, nullable = False)
-    location = database.Column(database.String, database.ForeignKey('venue.id'), nullable = False)
-    organizer = database.Column(database.String, database.ForeignKey('user.id'),nullable = False)
+    name = database.Column(database.String(50), nullable = False)
+    description = database.Column(database.String(50), nullable = False)
+    category = database.Column(database.Enum(EventRole), nullable = False)
+    streetAddress = database.Column(database.String(100), nullable = False)
+    city = database.Column(database.String(50), nullable = False)
+    state = database.Column(database.String(50), nullable = False)
+    country = database.Column(database.String(50), nullable = False)
+    zipCode = database.Column(database.Integer, nullable = False)
+    organizer = database.Column(database.Integer, database.ForeignKey('users.id'), nullable = False)
     startTime = database.Column(database.String(20), default = lambda: datetime.strftime("%H:%M"), nullable = False)
     endTime = database.Column(database.String(20), default = lambda: datetime.strftime("%H:%M"), nullable = False)
-    createdAt = database.Column(database.DateTime, default=datetime.estnow)
+    createdAt = database.Column(database.DateTime, default=datetime.utcnow)
     
     def to_json(self):
         return{
-            "id":self.id,
             "name": self.name,
             "description": self.description,
             "category": self.category,
