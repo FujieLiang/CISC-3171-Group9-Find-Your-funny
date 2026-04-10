@@ -1,12 +1,14 @@
 from flask import request, jsonify, session,redirect,url_for
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import LoginManager, login_user,current_user, login_required, logout_user
+from flask_jwt_extended import create_access_token, jwt_required,get_jwt_identity
 from config import app, database
 from models import *
 from Location.routes import location_bp
 from Location.geocoder import Geocoder
+from Location.distance_service import DistanceService
 
 geocoder = Geocoder(api_key= "69cc5ed34ef27252477349axzad0499")
+app.register_blueprint(location_bp, url_prefix="/location")
 
 
 # Account Creation Behavior
@@ -44,7 +46,9 @@ def create_account():
     return jsonify({"message": "New user created"}), 201
 
 @app.route("/user/<int:user_id>", methods=["GET"])
+@jwt_required()
 def get_user(user_id):
+    user_id = get_jwt_identity()
     user = User.query.get(user_id)
     if user:
         return jsonify({"User": user.to_json()}), 200
@@ -52,13 +56,14 @@ def get_user(user_id):
         return jsonify({"message": "User not found."}), 404
 
 @app.route("/user/<int:user_id>/update", methods=["PUT"])
-@login_required
+@jwt_required
 def update_user(user_id):
+    user_id= get_jwt_identity()
     user = User.query.get(user_id)
     if not user:
         return jsonify({"message": "User not found."}), 404
 
-    if user.id != current_user.id:
+    if user.id != user_id:
         return jsonify({"message": "You are not authorized to update this user."}), 403
 
     data = request.get_json()
@@ -86,14 +91,6 @@ def update_user(user_id):
 
 # Login Behavior 
 
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
 @app.route('/login', methods=['POST'])
 def login():
     username = request.json.get("username")
@@ -101,18 +98,11 @@ def login():
 
     user = User.query.filter_by(username=username).first()   
 
-    if user and user.password == password:
-        login_user(user)
-        return {"message": "Successful login!"}, 200
+    if user and check_password_hash(user.passwordHash,password):
+        token  = create_access_token(identity=user.id)
+        return jsonify({"token": token}), 200
     
     return {"message": "Invalid user information."}, 401
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    session.clear()
-    return redirect(url_for('login'))
 
 #Venue Retrieval Behavior 
 
@@ -131,9 +121,9 @@ def get_events():
     return jsonify({"Events":json_events})
     
 @app.route("/create-event", methods=["POST"])
-@login_required
+@jwt_required
 def create_event():
-    user_account_id = current_user.id
+    user_id = get_jwt_identity()
     
     event_name = request.json.get("eventName")
     description = request.json.get("description")
@@ -143,7 +133,7 @@ def create_event():
     state = request.json.get("state")
     country = request.json.get("country")
     zip_code = request.json.get("zipCode")
-    organizer = user_account_id
+    organizer = user_id
     start_time = request.json.get("startTime")
     end_time = request.json.get("endTime")
 
@@ -177,6 +167,21 @@ def create_event():
     
     return jsonify({"message": "New event created!"}), 201
 
+@app.route("/events/nearby")
+@jwt_required
+def nearby_events():
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if not user or not user.latitude or not user.longitude:
+        return jsonify({"error": "User location not set"}), 400
+    
+    latitude, longitude = user.latitude, user.longitude
+    events = Events.query.all()
+    matches = DistanceService.find_nearby_events(latitude,longitude,events)
+    
+    return jsonify(matches)
+
 @app.route("/events/<int:event_id>", methods= ["GET"])
 def get_event_by_id(event_id):
     event = Events.query.get(event_id)
@@ -186,11 +191,12 @@ def get_event_by_id(event_id):
         return jsonify({"message": "Event not found."}), 404
     
 @app.route("/events/<int:event_id>", methods= ["DELETE"])
-@login_required
+@jwt_required
 def delete_event(event_id):
+    user_id = get_jwt_identity()
     event = Events.query.get(event_id)
     if event:
-        if event.organizer == current_user.id:
+        if event.organizer == user_id:
             try:
                 database.session.delete(event)
                 database.session.commit()
@@ -203,11 +209,13 @@ def delete_event(event_id):
         return jsonify({"message": "Event not found."}), 404
 
 @app.route("/events/<int:event_id>/update", methods= ["PUT"])
-@login_required
+@jwt_required
 def update_event(event_id):
+    user_id = get_jwt_identity()
+
     event = Events.query.get(event_id)
     if event:
-        if event.organizer == current_user.id:
+        if event.organizer == user_id:
             event.name = request.json.get("eventName", event.name)
             event.description = request.json.get("description", event.description)
             event.category = request.json.get("category", event.category)
@@ -236,16 +244,16 @@ def update_event(event_id):
         return jsonify({"message": "Event not found."}), 404
     
 @app.route("/events/<int:event_id>/register")
-@login_required
+@jwt_required
 def event_signup(event_id):
     event = Events.query.get(event_id)
     if event:
-        user_account_id = current_user.id
+        user_id = get_jwt_identity()
 
-        if not user_account_id:
+        if not user_id:
             return jsonify({"message":"Incorrect user value. Please resubmit."}), 400
         
-        new_entry = Event_Signup_List(comic_name = user_account_id, event= event_id)
+        new_entry = Event_Signup_List(comic_name = user_id, event= event_id)
 
         try:
             database.session.add(new_entry)
@@ -254,6 +262,7 @@ def event_signup(event_id):
             return jsonify({"message": str(e)})
         
         return jsonify({"message": "Entry submitted successfully."}), 200
+
 
 if __name__ == "__main__":
     with app.app_context():
