@@ -15,9 +15,9 @@ class User(database.Model, UserMixin):
     city = database.Column(database.String(50), nullable = False)
     state = database.Column(database.String(50), nullable = False)
     country = database.Column(database.String(50), nullable = False)
-    zipCode = database.Column(database.Integer(50), nullable = False)
-    latitude = database.Column(database.Double, nullable = False)
-    longitude = database.Column(database.Double, nullable = False)
+    zipCode = database.Column(database.Integer, nullable = False)
+    latitude = database.Column(database.Float, nullable = False)
+    longitude = database.Column(database.Float, nullable = False)
     
     def to_json(self):
         return{
@@ -43,8 +43,8 @@ class Venue(database.Model):
     state = database.Column(database.String(50), nullable = False)
     country = database.Column(database.String(50), nullable = False)
     zipCode = database.Column(database.Integer, nullable = False)
-    latitude = database.Column(database.Double, nullable = False)
-    longitude = database.Column(database.Double, nullable = False)
+    latitude = database.Column(database.Float, nullable = False)
+    longitude = database.Column(database.Float, nullable = False)
     events = database.relationship('Events',backref = 'listings', lazy= 'dynamic')
 
     def to_json(self):
@@ -58,22 +58,19 @@ class Venue(database.Model):
             "longitude": self.longitude
         }
 
-class EventRole(enum.IntEnum):
-    STAND-UP_SHOW = 1
-    IMPROV_SHOW = 2
-    OPEN_MIC = 3
-
 class Events(database.Model):
     __tablename__ = 'events'
     id = database.Column(database.Integer, primary_key=True)
     name = database.Column(database.String(50), nullable = False)
     description = database.Column(database.String(50), nullable = False)
-    category = database.Column(database.Enum(EventRole), nullable = False)
+    category = database.Column(database.String(50), nullable = False)
     streetAddress = database.Column(database.String(100), nullable = False)
     city = database.Column(database.String(50), nullable = False)
     state = database.Column(database.String(50), nullable = False)
     country = database.Column(database.String(50), nullable = False)
     zipCode = database.Column(database.Integer, nullable = False)
+    latitude = database.Column(database.Float, nullable = False)
+    longitude = database.Column(database.Float, nullable = False)
     organizer = database.Column(database.Integer, database.ForeignKey('users.id'), nullable = False)
     startTime = database.Column(database.String(20), default = lambda: datetime.strftime("%H:%M"), nullable = False)
     endTime = database.Column(database.String(20), default = lambda: datetime.strftime("%H:%M"), nullable = False)
@@ -92,5 +89,11 @@ class Events(database.Model):
     
 class Role(database.Model):
     __tablename__ = 'role'
-    id = database.Column(database.Integer(), primary_key= True)
+    id = database.Column(database.Integer, primary_key= True)
     name = database.Column(database.String(50), unique = True, nullable = False)
+
+class Event_Signup_List(database.Model):
+    __tablename__ = 'event_signup_list'
+    id = database.Column(database.Integer, primary_key= True)
+    name = database.Column(database.Integer,database.ForeignKey('users.id'),nullable = False)
+    event = database.Column(database.Integer,database.ForeignKey('events.id'),nullable =False)
