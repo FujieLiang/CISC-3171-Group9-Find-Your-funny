@@ -1,6 +1,7 @@
 from flask import request, jsonify, session,redirect,url_for
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token, jwt_required,get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt, JWTManager
+from blacklist import blacklist
 from config import app, database
 from models import *
 from Location.routes import location_bp
@@ -9,7 +10,7 @@ from Location.distance_service import DistanceService
 
 geocoder = Geocoder(api_key= "69cc5ed34ef27252477349axzad0499")
 app.register_blueprint(location_bp, url_prefix="/location")
-
+jwt = JWTManager(app)
 
 # Account Creation Behavior
 
@@ -43,7 +44,10 @@ def create_account():
     except Exception as e:
         return jsonify({"message": str(e)}), 400
     
-    return jsonify({"message": "New user created"}), 201
+    token = create_access_token(identity= newUser.id)
+    return jsonify({"message": "New user created",
+                    "token": token,
+                    "new_user_id": newUser.id}), 201
 
 @app.route("/user/<int:user_id>", methods=["GET"])
 @jwt_required()
@@ -87,7 +91,8 @@ def update_user(user_id):
     except Exception as e:
         return jsonify({"message": str(e)}), 400
 
-    return jsonify({"message": "User updated successfully."}), 200
+    return jsonify({"message": "User updated successfully.",
+                    "user_id": user.id}), 200
 
 # Login Behavior 
 
@@ -100,9 +105,23 @@ def login():
 
     if user and check_password_hash(user.passwordHash,password):
         token  = create_access_token(identity=user.id)
-        return jsonify({"token": token}), 200
+        return jsonify({"token": token,
+                       "user_id": user.id}), 200
     
     return {"message": "Invalid user information."}, 401
+
+# Logout Behavior
+
+@app.route('/logout', methods=["POST"])
+@jwt_required
+def logout():
+    jti = get_jwt()["jti"]
+    blacklist.add(jti)
+    return {"message": "Successfully logged out."}, 200 
+
+@jwt.token_in_blocklist_loader
+def check_if_token_revoked(jwt_header,jwt_payload):
+    return jwt_payload["jti"] in blacklist
 
 #Venue Retrieval Behavior 
 
@@ -114,6 +133,7 @@ def get_venues():
 
 
 #Event behavior
+
 @app.route("/events", methods=["GET"])
 def get_events():
     events = Events.query.all()
@@ -165,7 +185,8 @@ def create_event():
     except Exception as e:
         return jsonify({"message": str(e)}), 400
     
-    return jsonify({"message": "New event created!"}), 201
+    return jsonify({"message": "New event created!",
+                    "event_id" : new_event.id}), 201
 
 @app.route("/events/nearby")
 @jwt_required
@@ -235,7 +256,8 @@ def update_event(event_id):
             
             try:
                 database.session.commit()
-                return jsonify({"message": "Event updated successfully."}), 200
+                return jsonify({"message": "Event updated successfully.",
+                                "event_id": event.id}), 200
             except Exception as e:
                 return jsonify({"message": str(e)}), 400
         else:
@@ -243,7 +265,7 @@ def update_event(event_id):
     else:
         return jsonify({"message": "Event not found."}), 404
     
-@app.route("/events/<int:event_id>/register")
+@app.route("/events/<int:event_id>/register", methods=["POST"])
 @jwt_required
 def event_signup(event_id):
     event = Events.query.get(event_id)
@@ -253,7 +275,7 @@ def event_signup(event_id):
         if not user_id:
             return jsonify({"message":"Incorrect user value. Please resubmit."}), 400
         
-        new_entry = Event_Signup_List(comic_name = user_id, event= event_id)
+        new_entry = signup_List(comic_name = user_id, event= event_id)
 
         try:
             database.session.add(new_entry)
@@ -261,7 +283,42 @@ def event_signup(event_id):
         except Exception as e:
             return jsonify({"message": str(e)})
         
-        return jsonify({"message": "Entry submitted successfully."}), 200
+        return jsonify({"message": "Entry submitted successfully.",
+                        "event_id": event.id}), 200
+
+
+@app.route("/events/<int:event_id>/get-list", methods=["GET"])
+@jwt_required
+def get_event_list(event_id):
+    event = Events.query.get(event_id)
+    if event:
+        user_id = get_jwt_identity()
+
+        if not user_id:
+            return jsonify({"message":"Incorret user value. PLease resubmit."}), 400
+
+        if user_id == event.organizer:
+            return jsonify({
+                "event_id": event.id,
+                "event_name": event.name,
+                "signup_list": fetch_signup_list(event)
+            }), 200
+
+        return jsonify({"message": "Not authorized to view this list."}), 403
+
+    return jsonify({"message": "Event not found."}), 404
+
+
+def fetch_signup_list(event):
+    entries = signup_List.query.filter_by(event=event.id).all()
+    return [
+        {
+            "id": entry.id,
+            "user_id": entry.name,
+            "event_id": entry.event,
+        }
+        for entry in entries
+    ]
 
 
 if __name__ == "__main__":
