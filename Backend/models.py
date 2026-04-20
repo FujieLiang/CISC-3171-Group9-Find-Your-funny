@@ -1,11 +1,19 @@
 from config import database
 from datetime import datetime, time
 from flask_login import UserMixin
+from sqlalchemy import Enum
 import enum
+
+
+class user_roles(enum.IntEnum):
+    STANDARD_USER = 1
+    COMIC = 2
+
 
 class User(database.Model, UserMixin):
     __tablename__ = 'users'
     id = database.Column(database.Integer, primary_key=True)
+    role = database.Column(database.Enum(user_roles), nullable= False)
     username = database.Column(database.String(50),nullable = False,unique = True)
     passwordHash = database.Column(database.String(256), nullable = False)
     firstName = database.Column(database.String(50), nullable = False)
@@ -57,13 +65,17 @@ class Venue(database.Model):
             "latitude": self.latitude,
             "longitude": self.longitude
         }
+class EventRole(enum.IntEnum):
+    STAND-UP_SHOW = 1
+    IMPROV_SHOW = 2
+    OPEN_MIC = 3
 
 class Events(database.Model):
     __tablename__ = 'events'
     id = database.Column(database.Integer, primary_key=True)
     name = database.Column(database.String(50), nullable = False)
     description = database.Column(database.String(50), nullable = False)
-    category = database.Column(database.String(50), nullable = False)
+    category = database.Column(database.Enum(EventRole), nullable = False)
     streetAddress = database.Column(database.String(100), nullable = False)
     city = database.Column(database.String(50), nullable = False)
     state = database.Column(database.String(50), nullable = False)
@@ -75,6 +87,7 @@ class Events(database.Model):
     startTime = database.Column(database.String(20), default = lambda: datetime.strftime("%H:%M"), nullable = False)
     endTime = database.Column(database.String(20), default = lambda: datetime.strftime("%H:%M"), nullable = False)
     createdAt = database.Column(database.DateTime, default=datetime.utcnow)
+    signupList = database.relationship('signup_list', backref= 'signups', lazy='dynamic')
     
     def to_json(self):
         return{
@@ -86,14 +99,9 @@ class Events(database.Model):
             "startTime": self.startTime,
             "endTime": self.endTime
         }
-    
-class Role(database.Model):
-    __tablename__ = 'role'
-    id = database.Column(database.Integer, primary_key= True)
-    name = database.Column(database.String(50), unique = True, nullable = False)
 
-class Event_Signup_List(database.Model):
-    __tablename__ = 'event_signup_list'
+class signup_List(database.Model):
+    __tablename__ = 'signup_list'
     id = database.Column(database.Integer, primary_key= True)
     name = database.Column(database.Integer,database.ForeignKey('users.id'),nullable = False)
     event = database.Column(database.Integer,database.ForeignKey('events.id'),nullable =False)
