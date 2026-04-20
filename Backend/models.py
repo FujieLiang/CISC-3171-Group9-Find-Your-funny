@@ -1,6 +1,5 @@
 from config import database
 from datetime import datetime, time
-from flask_login import UserMixin
 from sqlalchemy import Enum
 import enum
 
