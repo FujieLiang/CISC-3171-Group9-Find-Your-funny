@@ -37,7 +37,7 @@ def create_account():
 
     lat, lon = geocoder.geocode(full_address)
     
-    newUser = User(username = username,firstName=firstName, lastName=lastName, email=email, passwordHash=hashedPassword,streetAddress=streetAddress,city=city,state=state,country=country,zipCode=zipCode,latitude=lat,longitude=lon)
+    newUser = User(role = 1,username = username,firstName=firstName, lastName=lastName, email=email, passwordHash=hashedPassword,streetAddress=streetAddress,city=city,state=state,country=country,zipCode=zipCode,latitude=lat,longitude=lon)
     try:
         database.session.add(newUser)
         database.session.commit()
@@ -265,7 +265,7 @@ def update_event(event_id):
     else:
         return jsonify({"message": "Event not found."}), 404
     
-@app.route("/events/<int:event_id>/register", methods=["POST"])
+@app.route("/events/<int:event_id>/register", methods=["POST","PUT"])
 @jwt_required
 def event_signup(event_id):
     event = Events.query.get(event_id)
@@ -275,8 +275,11 @@ def event_signup(event_id):
         if not user_id:
             return jsonify({"message":"Incorrect user value. Please resubmit."}), 400
         
-        new_entry = signup_List(comic_name = user_id, event= event_id)
+        user = User.query.get(user_id)
+        user.role = 2
 
+        new_entry = signup_List(comic_name = user_id, event= event_id)
+        
         try:
             database.session.add(new_entry)
             database.session.commit()
