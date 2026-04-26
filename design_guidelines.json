@@ -1,0 +1,116 @@
+{
+  "project_name": "Find Your Funny",
+  "domain": "Comedy Event Listing Application",
+  "theme": "LIGHT (with Heavy Theatrical Contrast)",
+  "archetype": "Archetype 5 (Jewel & Luxury / Theatrical) adapted for Warm Retro",
+  "colors": {
+    "background": {
+      "base": "#F9F6F0",
+      "surface_paper": "#FDFBF7",
+      "surface_ticket": "#EAE3D2",
+      "dark_theatrical": "#1A1A1A"
+    },
+    "brand": {
+      "primary": "#7A1022",
+      "secondary": "#FFB800",
+      "accent_pink": "#FF4D85",
+      "border_dim": "#D6CFC0"
+    },
+    "text": {
+      "primary": "#1A1A1A",
+      "secondary": "#4A4640",
+      "inverse": "#F9F6F0",
+      "brand": "#7A1022"
+    },
+    "gradients": {
+      "spotlight": "radial-gradient(circle at 50% 0%, rgba(255, 184, 0, 0.15) 0%, rgba(249, 246, 240, 0) 70%)",
+      "marquee_glow": "drop-shadow(0 0 8px rgba(255, 184, 0, 0.6))"
+    },
+    "forbidden_colors": ["#9D4CDD", "#1B93A4", "#7351B7", "pure #000000", "generic SaaS blues"]
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Abril Fatface",
+      "subheading": "Playfair Display",
+      "body": "IBM Plex Sans",
+      "mono_accent": "IBM Plex Mono",
+      "forbidden_fonts": ["Inter", "Roboto", "Open Sans", "Lato"]
+    },
+    "sizing": {
+      "h1": "text-5xl md:text-6xl lg:text-7xl tracking-tighter leading-none",
+      "h2": "text-4xl md:text-5xl tracking-tight leading-tight",
+      "h3": "text-2xl md:text-3xl tracking-tight",
+      "body": "text-base md:text-lg leading-relaxed",
+      "ticket_meta": "text-xs md:text-sm tracking-[0.15em] uppercase font-mono"
+    }
+  },
+  "layout_and_spacing": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "spacing_scale": "Use generous spacing. p-6, p-8, p-12. Avoid cramped layouts.",
+    "grids": {
+      "marketing_hero": "Bento Mode A (Tetris Grid) - Asymmetrical, overlapping layers, dramatic scale.",
+      "event_list": "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+    }
+  },
+  "surface_strategies": {
+    "ticket_card": {
+      "background": "bg-[#FDFBF7]",
+      "border": "border-2 border-[#1A1A1A]",
+      "shadow": "shadow-[6px_6px_0px_#1A1A1A]",
+      "special_effect": "Add a dashed dividing line internally (border-l-2 border-dashed border-[#1A1A1A]/30) to simulate a tear-off ticket stub."
+    },
+    "marquee_button": {
+      "background": "bg-[#7A1022]",
+      "text": "text-[#FFB800]",
+      "border": "border-2 border-[#1A1A1A]",
+      "shadow": "shadow-[4px_4px_0px_#1A1A1A]",
+      "hover": "hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_#1A1A1A] transition-all",
+      "active": "active:translate-y-[4px] active:shadow-none"
+    }
+  },
+  "motion_and_interaction": {
+    "hover_states": "Crisp and tactile. Elements should feel physical. Offset shadows increase on hover to lift elements up.",
+    "entrance": "Staggered fade-up for event lists. Fast, punchy easing (e.g., cubic-bezier(0.25, 1, 0.5, 1))."
+  },
+  "components": {
+    "shadcn_customizations": {
+      "Input": "bg-[#FDFBF7] border-2 border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#7A1022] shadow-[4px_4px_0px_transparent] focus-visible:shadow-[4px_4px_0px_#7A1022]",
+      "Button": "rounded-none font-heading text-lg",
+      "Card": "Use custom Ticket Card surface strategy instead of default Shadcn Card for events."
+    },
+    "icons": {
+      "library": "lucide-react",
+      "style": "Use robust stroke-width (2 or 2.5) to match the bold retro typography. Primary icons: Mic, MapPin, Calendar, Clock, Ticket, Users."
+    }
+  },
+  "media": {
+    "image_urls": {
+      "hero_background": {
+        "url": "https://images.unsplash.com/photo-1623437360545-ca94ca0d1e6d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwzfHxzdGFuZCUyMHVwJTIwY29tZWR5JTIwbWljcm9waG9uZSUyMHN0YWdlfGVufDB8fHx8MTc3NjY1NzM3Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Dramatic microphone on stage with smoke. Use as hero background with oxblood overlay (bg-[#7A1022]/80) to allow text readability."
+      },
+      "featured_event_1": {
+        "url": "https://images.unsplash.com/photo-1676638281470-94102958b8e7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHw0fHxzdGFuZCUyMHVwJTIwY29tZWR5JTIwbWljcm9waG9uZSUyMHN0YWdlfGVufDB8fHx8MTc3NjY1NzM3Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Microphone in front of a theater curtain. Excellent for a premium 'Featured Event' card."
+      },
+      "featured_event_2": {
+        "url": "https://images.unsplash.com/photo-1648237409808-aa4649c07ec8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwxfHxzdGFuZCUyMHVwJTIwY29tZWR5JTIwbWljcm9waG9uZSUyMHN0YWdlfGVufDB8fHx8MTc3NjY1NzM3Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Dark room neon microphone, great for Open Mic or underground events."
+      },
+      "audience_reaction": {
+        "url": "https://images.unsplash.com/photo-1699616040692-987a9be61635?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwzfHxjb21lZHklMjBjbHViJTIwYXVkaWVuY2UlMjBsYXVnaGluZ3xlbnwwfHx8fDE3NzY2NTczNzZ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Audience laughing. Use in community/signup section to build social proof."
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "Install Google Fonts in index.css: @import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap');",
+    "Tailwind Config: Add colors (oxblood, marigold, warm-cream) and font families (heading: Abril Fatface, sub: Playfair Display, body: IBM Plex Sans, mono: IBM Plex Mono).",
+    "Hero Section: Build an overlapping layout. Left side bold typography ('Find Your Funny'), right side a floating 'Ticket Stub' featuring the nearest upcoming event. Background should be warm-cream with a subtle 'spotlight' radial gradient behind the text.",
+    "Event Cards MUST look like retro ticket stubs. Use strict geometric borders (2px solid black), solid offset shadows (brutalist style), and a vertical dashed line separating the time/date (stub) from the event title (main ticket).",
+    "Avoid standard corporate UI. Buttons should be chunky rectangles. Avoid pill-shaped rounded-full buttons unless imitating a marquee bulb.",
+    "Data Test IDs: Apply `data-testid` to all interactive elements (e.g., `data-testid=\"event-signup-button\"`, `data-testid=\"create-event-submit\"`).",
+    "Forms: Wrap Shadcn inputs in sharp 2px black borders. Give them a subtle offset shadow that intensifies on focus. Keep the playful, tactile feel even in functional dashboards.",
+    "No purple gradients. No Inter font. Emphasize oxblood red, cream, and stark black for contrast."
+  ]
+}
