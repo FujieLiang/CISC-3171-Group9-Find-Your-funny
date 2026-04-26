@@ -15,6 +15,9 @@ export default function UserProfile() {
   const [signed, setSigned] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [showFollowers, setShowFollowers] = useState(false);
 
   const isOwnProfile = currentUser && Number(id) === currentUser.id;
 
@@ -41,11 +44,16 @@ export default function UserProfile() {
       setError("");
 
       try {
-        const [a, b] = await Promise.all([
-           api.get(`/users/${id}/events/created`),
-           api.get(`/users/${id}/events/signedup`),
+        const [a, b, c, d] = await Promise.all([
+          api.get(`/users/${id}/events/created`),
+          api.get(`/users/${id}/events/signedup`),
+          api.get(`/users/${id}/followers`),
+          api.get(`/users/${id}/following`),
         ]);
-        setCreated(a.data); setSigned(b.data);
+        setCreated(a.data);
+        setSigned(b.data);
+        setFollowers(c.data);
+        setFollowing(d.data);
       } catch (e) { setError(formatApiError(e)); }
       finally { setLoading(false); }
     })();
@@ -87,7 +95,7 @@ export default function UserProfile() {
     );
   }
 
-  const list = tab === "created" ? created : signed;
+  const list = tab === "created" ? created : tab === "signed" ? signed : [];
 
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -125,8 +133,32 @@ export default function UserProfile() {
         <StatTile label="Shows hosted" value={created.length} Icon={Mic} />
         <StatTile label="On the list" value={signed.length} Icon={Ticket} />
         <StatTile label="Role" value={profileUser.role === 2 ? "Comic" : "Fan"} Icon={User} />
-        <StatTile label="Home" value={`${profileUser.city}`} Icon={Ticket} />
+        <FollowersTile count ={followers.length} isOwnProfile = {isOwnProfile} expanded = {showFollowers} onToggle ={() => setShowFollowers((s) => !s)}/>
       </div>
+
+      {isOwnProfile && showFollowers && (
+        <div className="ticket-card p-5 mb-6">
+          <div className="font-mono-accent text-[10px] uppercase tracking-[0.25em] text-stark/60 mb-3">
+            Your Followers
+          </div>
+          {followers.length === 0 ? (
+            <p className="font-sub italic text-stark/70">Nobody yet. Build a following.</p>
+          ) : (
+            <ul className="grid sm:grid-cols-2 gap-2">
+              {followers.map((u) => (
+                <li key={u.id}>
+                <Link to={`/profile/${u.id}`} className="block px-3 py-2 hover:bg-marigold/10 transition-colors">
+                  <div className="font-sub text-base leading-none">{u.firstName} {u.lastName}</div>
+                  <div className="font-mono-accent text-[10px] uppercase tracking-[0.2em] text-stark/60 mt-1">
+                  @{u.username}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )}
 
       <div className="flex gap-2 mb-6">
         <button
@@ -141,8 +173,16 @@ export default function UserProfile() {
           onClick={() => setTab("signed")}
           className={`chip ${tab === "signed" ? "chip-active" : ""}`}
         >
-          <Ticket className="w-3.5 h-3.5" strokeWidth={2.5} /> 
+          <Ticket className="w-3.5 h-3.5" strokeWidth={2.5} />
           {isOwnProfile ? "Signed Up" : "They Signed Up"}
+        </button>
+
+        <button
+          onClick={() => setTab("following")}
+          className={`chip ${tab === "following" ? "chip-active" : ""}`}
+        >
+          <User className="w-3.5 h-3.5" strokeWidth={2.5} />
+          Following
         </button>
       </div>
 
@@ -156,6 +196,34 @@ export default function UserProfile() {
         <div className="font-mono-accent text-sm uppercase tracking-wider text-stark/70">
           Loading…
         </div>
+      ) : tab === "following" ? (
+        following.length === 0 ? (
+          <div className="ticket-card p-10 text-center">
+            <h3 className="font-heading text-3xl">
+              {isOwnProfile ? "You aren’t following anyone yet." : "Not following anyone yet."}
+            </h3>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {following.map((u) => (
+              <Link
+                key={u.id}
+                to={`/profile/${u.id}`}
+                className="ticket-card p-4 flex items-center gap-3 hover:bg-marigold/10 transition-colors"
+              >
+                <div className="w-10 h-10 bg-oxblood/15 border border-oxblood/50 text-oxblood flex items-center justify-center font-accent">
+                  {(u.firstName?.[0] || u.username?.[0] || "?").toUpperCase()}
+                </div>
+                <div>
+                  <div className="font-sub text-base leading-none">{u.firstName} {u.lastName}</div>
+                  <div className="font-mono-accent text-[10px] uppercase tracking-[0.2em] text-stark/60 mt-1">
+                    @{u.username}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )
       ) : list.length === 0 ? (
         <div className="ticket-card p-10 text-center">
           <h3 className="font-heading text-3xl">
@@ -194,6 +262,83 @@ function StatTile({ label, value, Icon }) {
     </div>
   );
 }
+
+function FollowersTile({ count, isOwnProfile, expanded, onToggle }) {
+  const inner = (
+    <>
+      <div className="w-10 h-10 bg-marigold/15 border border-marigold/50 flex items-center justify-center">
+        <User className="w-5 h-5 text-stark" strokeWidth={2.5} />
+      </div>
+      <div>
+        <div className="font-mono-accent text-[10px] uppercase tracking-[0.25em] text-stark/60">
+          Followers
+        </div>
+        <div className="font-heading text-2xl leading-none mt-1">{count}</div>
+      </div>
+    </>
+  );
+
+  if (!isOwnProfile) {
+    return <div className="ticket-card p-4 flex items-center gap-3">{inner}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`ticket-card p-4 flex items-center gap-3 text-left w-full transition-colors ${
+        expanded ? "bg-marigold/10" : "hover:bg-marigold/5"
+      }`}
+      aria-expanded={expanded}
+    >
+      {inner}
+    </button>
+  );
+}
+
+function FollowButton({ targetUserId }) {
+  const [following, setFollowing] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get(`/users/${targetUserId}/follow-status`);
+        if (!cancelled) setFollowing(!!data.following);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [targetUserId]);
+
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      if (following) {
+        await api.delete("/follow", { data: { targetUserId } });
+        setFollowing(false);
+      } else {
+        await api.post("/follow", { targetUserId });
+        setFollowing(true);
+      }
+    } catch (e) {
+      // optional: toast.error(formatApiError(e))
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={busy}
+      className={following ? "marquee-btn-light" : "marquee-btn"}
+    >
+      {following ? "Unfollow" : "Follow"}
+    </button>
+  );
+}
+
   
 
 
