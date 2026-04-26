@@ -251,6 +251,31 @@ def api_follow_status(user_id):
     return jsonify({"following": target in me.following}), 200
 
 
+def _follow_user_payload(u):
+    return {
+        "id": u.id,
+        "username": u.username,
+        "firstName": u.firstName,
+        "lastName": u.lastName,
+    }
+
+
+@app.route("/api/users/<int:user_id>/followers", methods=["GET"])
+def api_user_followers(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"detail": "User not found"}), 404
+    return jsonify([_follow_user_payload(u) for u in user.followers]), 200
+
+
+@app.route("/api/users/<int:user_id>/following", methods=["GET"])
+def api_user_following(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"detail": "User not found"}), 404
+    return jsonify([_follow_user_payload(u) for u in user.following]), 200
+
+
 @app.route("/api/auth/logout", methods=["POST"])
 @jwt_required()
 def api_logout():
