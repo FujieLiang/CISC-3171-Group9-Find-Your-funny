@@ -12,7 +12,7 @@ from Location.matching_service import MatchingService
 from Location.distance_service import DistanceService
 import requests
 
-geocoder = Geocoder(api_key="your_api_key")
+geocoder = Geocoder(api_key="69cc5ed34ef27252477349axzad0499")
 distance_service = DistanceService()
 matcher = MatchingService(distance_service)
 app.register_blueprint(location_bp, url_prefix="/location")
@@ -299,6 +299,20 @@ def api_geo_reverse():
         return jsonify({"detail": f"Reverse geocoding failed: {e}"}), 400
 
 
+@app.route("/api/geo/forward", methods=["POST"])
+def api_geo_forward():
+    body = request.get_json() or {}
+    address = (body.get("address") or "").strip()
+    if not address:
+        return jsonify({"detail": "address is required"}), 400
+
+    try:
+        lat, lon = geocoder.geocode(address)
+        return jsonify({"latitude": lat, "longitude": lon}), 200
+    except Exception as e:
+        return jsonify({"detail": f"Geocoding failed: {e}"}), 400
+
+
 @app.route("/api/events", methods=["GET"])
 def api_events_list():
     q = (request.args.get("q") or "").strip().lower()
@@ -566,10 +580,14 @@ def api_nearby_public():
         limit = int(limit) if limit is not None else 40
     except Exception:
         limit = 40
+    try:
+        radius_km = float(request.args.get("radius_km", 50))
+    except Exception:
+        radius_km = 50
 
     events = Events.query.all()
     event_dicts = [{"id": e.id, "lat": e.latitude, "lon": e.longitude} for e in events]
-    matches = matcher.find_nearby_events(lat, lon, event_dicts)
+    matches = matcher.find_nearby_events(lat, lon, event_dicts, radius_km=radius_km)
     ids = [m["event_id"] for m in matches][:limit]
     by_id = {e.id: e for e in events}
     return jsonify([_event_payload(by_id[i]) for i in ids if i in by_id]), 200
