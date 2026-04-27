@@ -165,6 +165,14 @@ def api_login():
 
     return jsonify({"detail": "Invalid user information."}), 401
 
+@app.route("/api/auth/logout", methods=["POST"])
+@jwt_required()
+def api_logout():
+    jti = get_jwt()["jti"]
+    blacklist.add(jti)
+    return jsonify({"ok": True}), 200
+
+
 @app.route("/api/auth/me", methods=["GET"])
 @jwt_required()
 def api_me():
@@ -276,13 +284,6 @@ def api_user_following(user_id):
     return jsonify([_follow_user_payload(u) for u in user.following]), 200
 
 
-@app.route("/api/auth/logout", methods=["POST"])
-@jwt_required()
-def api_logout():
-    jti = get_jwt()["jti"]
-    blacklist.add(jti)
-    return jsonify({"ok": True}), 200
-
 
 @app.route("/api/geo/reverse", methods=["POST"])
 def api_geo_reverse():
@@ -293,21 +294,7 @@ def api_geo_reverse():
         return jsonify({"detail": "latitude and longitude are required"}), 400
 
     try:
-        r = requests.get(
-            "https://geocode.maps.co/reverse",
-            params={"lat": latitude, "lon": longitude, "api_key": geocoder.api_key},
-            timeout=10,
-        )
-        r.raise_for_status()
-        data = r.json()
-        addr = (data or {}).get("address") or {}
-        return jsonify({
-            "city": addr.get("city") or addr.get("town") or addr.get("village"),
-            "state": addr.get("state"),
-            "country": addr.get("country"),
-            "zipCode": addr.get("postcode"),
-            "raw": data,
-        }), 200
+        return jsonify(geocoder.reverse_geocode(latitude, longitude)), 200
     except Exception as e:
         return jsonify({"detail": f"Reverse geocoding failed: {e}"}), 400
 
