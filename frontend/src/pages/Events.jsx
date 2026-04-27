@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { api, formatApiError } from "@/lib/api";
 import EventCard from "@/components/EventCard";
 import CategoryTabs from "@/components/CategoryTabs";
-import { Search, MapPin, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function Events() {
   const [events, setEvents] = useState([]);
@@ -45,28 +45,22 @@ export default function Events() {
 
       <div className="ticket-card p-4 md:p-6 mb-8">
         <div className="grid md:grid-cols-[1fr_1fr_auto] gap-3">
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stark/60" strokeWidth={2.5} />
-            <input
-              data-testid="events-search"
-              className="retro-input w-full pl-9"
-              placeholder="Search bits, shows, comics..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && load()}
-            />
-          </div>
-          <div className="relative">
-            <MapPin className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-stark/60" strokeWidth={2.5} />
-            <input
-              data-testid="events-city"
-              className="retro-input w-full pl-9"
-              placeholder="City (e.g. Brooklyn)"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && load()}
-            />
-          </div>
+          <input
+            data-testid="events-search"
+            className="retro-input w-full"
+            placeholder="Search bits, shows, comics..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && load()}
+          />
+          <input
+            data-testid="events-city"
+            className="retro-input w-full"
+            placeholder="City (e.g. Brooklyn)"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && load()}
+          />
           <button onClick={load} className="marquee-btn-sm" data-testid="events-apply">Apply</button>
         </div>
         <div className="mt-4">
