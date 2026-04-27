@@ -13,6 +13,8 @@ export default function NearMe() {
   const [status, setStatus] = useState("idle"); // idle | locating | loading | ready | error
   const [address, setAddress] = useState(null);
   const [error, setError] = useState("");
+  const [addressInput, setAddressInput] = useState("");
+  const [searchedAddress, setSearchedAddress] = useState("");
 
   const fetchNearby = async (lat, lon) => {
     setStatus("loading");
@@ -27,6 +29,27 @@ export default function NearMe() {
     }
   };
 
+  const searchByAddress = async (e) => {
+    e?.preventDefault?.();
+    const q = addressInput.trim();
+    if (!q) return;
+
+    setStatus("locating");
+    setError("");
+    try {
+      const { data } = await api.post("/geo/forward", { address: q });
+      const lat = Number(data.latitude);
+      const lon = Number(data.longitude);
+      setLoc({ lat, lon });
+      setAddress(null);
+      setSearchedAddress(q);
+      fetchNearby(lat, lon);
+    } catch (err) {
+      setError(formatApiError(err) || "We couldn't find that address.");
+      setStatus("error");
+    }
+  };
+
   const detectLocation = () => {
   if (!navigator.geolocation) {
     setError("Your browser doesn't support geolocation.");
@@ -35,6 +58,7 @@ export default function NearMe() {
   }
 
   setStatus("locating");
+  setSearchedAddress("");
 
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
@@ -63,7 +87,7 @@ export default function NearMe() {
       setError(err.message || "We couldn't get your location.");
       setStatus("error");
     },
-    { enableHighAccuracy: false, timeout: 10000 }
+    { enableHighAccuracy: true, timeout: 10000 }
   );
 };
 
@@ -86,7 +110,9 @@ export default function NearMe() {
         <h1 className="font-heading text-5xl md:text-6xl mt-1">Shows Near You</h1>
         <div className="mt-3 flex items-center gap-2 font-sub italic text-lg text-stark/80">
           <MapPin className="w-5 h-5 text-oxblood" strokeWidth={2.5} />
-          {address?.city ? (
+          {searchedAddress ? (
+            <span>Near <span className="font-bold not-italic">{searchedAddress}</span></span>
+          ) : address?.city ? (
             <span>In or around <span className="font-bold not-italic">{address.city}{address.state ? `, ${address.state}` : ""}</span></span>
           ) : loc ? (
             <span className="font-mono-accent text-sm">{loc.lat.toFixed(3)}, {loc.lon.toFixed(3)}</span>
@@ -98,7 +124,22 @@ export default function NearMe() {
             Relocate
           </button>
         </div>
+
       </header>
+
+      <div className="ticket-card p-4 md:p-6 mb-8">
+        <form onSubmit={searchByAddress} className="grid md:grid-cols-[1fr_auto] gap-3" data-testid="near-me-address-form">
+          <input
+            data-testid="near-me-address-input"
+            className="retro-input w-full"
+            placeholder="Search by address, city, or zip"
+            value={addressInput}
+            onChange={(e) => setAddressInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && searchByAddress(e)}
+          />
+          <button type="submit" className="marquee-btn-sm" data-testid="near-me-address-submit">Search</button>
+        </form>
+      </div>
 
       <div className="mb-6">
         <CategoryTabs value={category} onChange={setCategory} />
