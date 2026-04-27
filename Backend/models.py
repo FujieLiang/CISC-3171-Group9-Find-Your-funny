@@ -1,6 +1,5 @@
 from config import database
 from datetime import datetime
-from flask_login import UserMixin
 import enum
 
 
@@ -14,7 +13,7 @@ follows = database.Table(
     database.Column('following_id', database.Integer, database.ForeignKey('users.id'))
 )
 
-class User(database.Model, UserMixin):
+class User(database.Model):
     __tablename__ = 'users'
     id = database.Column(database.Integer, primary_key=True)
     role = database.Column(database.Enum(user_roles), nullable= False)
