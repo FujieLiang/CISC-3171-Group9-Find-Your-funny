@@ -172,7 +172,6 @@ def api_logout():
     blacklist.add(jti)
     return jsonify({"ok": True}), 200
 
-
 @app.route("/api/auth/me", methods=["GET"])
 @jwt_required()
 def api_me():
@@ -502,14 +501,14 @@ def api_event_signups(event_id):
     entries = signup_List.query.filter_by(event=event_id).all()
     signups = []
     for entry in entries:
-        u = User.query.get(entry.name)
+        user = User.query.get(entry.name)
         row = {
             "id": entry.id,
-            "userId": u.id if u else None,
-            "userName": u.username if u else None
+            "userId": user.id if user else None,
+            "userName": user.username if user else None
         }
         if is_organizer:
-            row["displayName"] = f"{u.firstName} {u.lastName}".strip() if u else None
+            row["displayName"] = f"{user.firstName} {user.lastName}".strip() if user else None
             row["createdAt"] = None,
         signups.append(row)
 
@@ -558,7 +557,7 @@ def api_event_cancel_signup(event_id):
 @app.route("/api/users/<int:user_id>/events/created", methods=["GET"])
 def api_events_created(user_id):
     events = Events.query.filter_by(organizer=user_id).all()
-    return jsonify([_event_payload(e) for e in events]), 200
+    return jsonify([_event_payload(event) for event in events]), 200
 
 
 @app.route("/api/users/<int:user_id>/events/signedup", methods=["GET"])
@@ -591,13 +590,13 @@ def api_nearby_public():
     events = Events.query.all()
 
     event_dicts = [
-        {"id": e.id, "lat": e.latitude, "lon": e.longitude}
-        for e in events
-        if (e.latitude or e.longitude)
+        {"id": event.id, "lat": event.latitude, "lon": event.longitude}
+        for event in events
+        if (event.latitude or event.longitude)
     ]
     matches = matcher.find_nearby_events(lat, lon, event_dicts, radius_km=radius_km)
-    ids = [m["event_id"] for m in matches][:limit]
-    by_id = {e.id: e for e in events}
+    ids = [match["event_id"] for match in matches][:limit]
+    by_id = {event.id: event for event in events}
     return jsonify([_event_payload(by_id[i]) for i in ids if i in by_id]), 200
 
 
