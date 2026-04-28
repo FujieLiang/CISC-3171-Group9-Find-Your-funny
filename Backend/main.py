@@ -379,7 +379,10 @@ def api_events_create():
         try:
             lat, lon = geocoder.geocode(full_address)
         except Exception:
-            lat, lon = 0.0, 0.0
+            try: 
+                lat, lon = geocoder.geocode(f"{city}, {state} {zip_code}")
+            except Exception as e:
+                return jsonify({"detail": f"We couldn't locate that address: {e}"}), 400
 
         new_venue = Venue(
             streetAddress=street_address,
@@ -581,17 +584,21 @@ def api_nearby_public():
     except Exception:
         limit = 40
     try:
-        radius_km = float(request.args.get("radius_km", 50))
+        radius_km = float(request.args.get("radius_km", 15))
     except Exception:
-        radius_km = 50
+        radius_km = 15
 
     events = Events.query.all()
-    event_dicts = [{"id": e.id, "lat": e.latitude, "lon": e.longitude} for e in events]
+
+    event_dicts = [
+        {"id": e.id, "lat": e.latitude, "lon": e.longitude}
+        for e in events
+        if (e.latitude or e.longitude)
+    ]
     matches = matcher.find_nearby_events(lat, lon, event_dicts, radius_km=radius_km)
     ids = [m["event_id"] for m in matches][:limit]
     by_id = {e.id: e for e in events}
     return jsonify([_event_payload(by_id[i]) for i in ids if i in by_id]), 200
-
 
 
 @jwt.token_in_blocklist_loader
