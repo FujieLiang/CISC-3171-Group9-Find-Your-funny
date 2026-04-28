@@ -92,7 +92,11 @@ export default function NearMe() {
 };
 
   useEffect(() => {
-    if (user?.latitude && user?.longitude) {
+    const hasUserCoords =
+      Number.isFinite(user?.latitude) &&
+      Number.isFinite(user?.longitude) &&
+      !(user.latitude === 0 && user.longitude === 0);
+    if (hasUserCoords) {
       setLoc({ lat: user.latitude, lon: user.longitude });
       fetchNearby(user.latitude, user.longitude);
     } else {
