@@ -92,12 +92,32 @@ export default function EventCard({ event, index = 0 }) {
           </div>
 
           <div className="mt-4 pt-3 border-t border-dim flex items-center justify-between">
-            <div className="font-mono-accent text-[10px] tracking-[0.2em] uppercase text-stark/45">
+            {/* <div className="font-mono-accent text-[10px] tracking-[0.2em] uppercase text-stark/45">
               by <span className="text-marigold">{event.organizerName || "Anon"}</span>
-            </div>
+            </div> */}
+
+
+              {/* allows users to follow organizers linked to an event */}
+              <div className="font-mono-accent text-[10px] tracking-[0.2em] uppercase text-stark/45">
+              by{" "}
+              {event.organizer ? (
+              <Link
+                to={`/profile/${event.organizer}`}
+                className="text-marigold hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {event.organizerName || "Anon"}
+              </Link>
+              ) : (
+                <span className="text-marigold">{event.organizerName || "Anon"}</span>
+              )}
+              </div>
+
+
             <div className="font-mono-accent text-[10px] tracking-[0.2em] uppercase text-stark/45">
               {event.signupCount || 0} on list
             </div>
+
           </div>
         </div>
       </div>
