@@ -15,7 +15,7 @@ from Recommend.onboarding_routes import onboarding_bp
 from Recommend.event_humor_routes import event_humor_bp
 
 
-geocoder = Geocoder(api_key="69cc5ed34ef27252477349axzad0499")
+geocoder = Geocoder(api_key="API_KEY")
 distance_service = DistanceService()
 matcher = MatchingService(distance_service)
 app.register_blueprint(location_bp, url_prefix="/location")
