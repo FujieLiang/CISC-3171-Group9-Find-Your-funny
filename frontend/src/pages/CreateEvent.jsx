@@ -4,6 +4,7 @@ import { api, formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Mic, Ticket, Users, Calendar, Clock, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import ComedianPicker from "@/components/ComedianPicker";
 
 const CATEGORIES = [
   { key: "STANDUP", label: "Stand-Up Show", Icon: Mic },
@@ -25,7 +26,9 @@ export default function CreateEvent() {
     zipCode: "",
     startTime: "",
     endTime: "",
+    reservationCap: "",
   });
+  const [performers, setPerformers] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,6 +39,8 @@ export default function CreateEvent() {
 
   const onChange = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  const isStandup = form.category === "STANDUP";
+
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setError("");
@@ -45,6 +50,12 @@ export default function CreateEvent() {
         startTime: new Date(form.startTime).toISOString(),
         endTime: new Date(form.endTime).toISOString(),
       };
+      if (isStandup) {
+        payload.reservationCap = form.reservationCap ? Number(form.reservationCap) : null;
+        payload.performerIds = performers.map((p) => p.id);
+      } else {
+        delete payload.reservationCap;
+      }
       const { data } = await api.post("/events", payload);
       toast.success("Show is on the bill!");
       navigate(`/events/${data.event.id}`);
@@ -151,6 +162,49 @@ export default function CreateEvent() {
             <input data-testid="ce-end" type="datetime-local" className="retro-input w-full mt-1" value={form.endTime} onChange={onChange("endTime")} required />
           </div>
         </div>
+
+        {isStandup && (
+          <>
+            <div className="dashed-divider" />
+            <div>
+              <div className="font-mono-accent text-[10px] tracking-[0.25em] uppercase text-oxblood mb-1">
+                Stand-Up Only
+              </div>
+              <h2 className="font-heading text-2xl">Lineup & Reservations</h2>
+              <p className="font-sub italic text-stark/70 text-sm mt-1">
+                Curate the comics on the bill and cap the house.
+              </p>
+            </div>
+
+            <div>
+              <label className="font-mono-accent text-[10px] tracking-[0.25em] uppercase text-stark/70">
+                Reservation Cap
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 40 (leave blank for unlimited)"
+                className="retro-input w-full mt-1"
+                value={form.reservationCap}
+                onChange={onChange("reservationCap")}
+                data-testid="ce-cap"
+              />
+              <p className="font-sub italic text-stark/60 text-xs mt-1">
+                Once the room is full, the show is marked Sold Out. Caps can be raised later, never lowered.
+              </p>
+            </div>
+
+            <div>
+              <label className="font-mono-accent text-[10px] tracking-[0.25em] uppercase text-stark/70">
+                Lineup
+              </label>
+              <div className="mt-1">
+                <ComedianPicker selected={performers} onChange={setPerformers} />
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="pt-2">
           <button type="submit" disabled={busy} className="marquee-btn w-full md:w-auto" data-testid="ce-submit">
