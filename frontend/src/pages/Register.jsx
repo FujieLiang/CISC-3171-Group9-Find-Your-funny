@@ -29,7 +29,7 @@ export default function Register() {
     setBusy(true); setError("");
     const res = await register(form);
     setBusy(false);
-    if (res.ok) navigate("/");
+    if (res.ok) navigate("/onboarding");
     else setError(res.error);
   };
 
