@@ -6,7 +6,6 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from blacklist import blacklist
 from config import app, database
 from models import *
-from Location.routes import location_bp
 from Location.geocoder import Geocoder
 from Location.matching_service import MatchingService
 from Location.distance_service import DistanceService
@@ -15,10 +14,9 @@ from Recommend.onboarding_routes import onboarding_bp
 from Recommend.event_humor_routes import event_humor_bp
 
 
-geocoder = Geocoder(api_key="API_KEY")
+geocoder = Geocoder(api_key=os.environ["GEOCODER_API_KEY"])
 distance_service = DistanceService()
 matcher = MatchingService(distance_service)
-app.register_blueprint(location_bp, url_prefix="/location")
 jwt = JWTManager(app)
 app.register_blueprint(recommend_bp, url_prefix="/api/recommend")
 app.register_blueprint(onboarding_bp, url_prefix="/api/onboarding")
@@ -29,7 +27,7 @@ app.register_blueprint(event_humor_bp, url_prefix="/api/events")
 @app.route("/<path:path>")
 def serve_react(path):
     # Let API routes 404 naturally if not matched
-    if path.startswith("api/") or path.startswith("location/"):
+    if path.startswith("api/"):
         return jsonify({"detail": "Not found"}), 404
 
     build_dir = app.template_folder
