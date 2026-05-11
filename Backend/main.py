@@ -82,6 +82,23 @@ def _event_payload(event: Events):
     organizer_name = None
     if organizer:
         organizer_name = f"{organizer.firstName} {organizer.lastName}".strip()
+
+    reserved_count = event.signupList.count() if event.signupList is not None else 0
+    cap = event.reservationCap
+    is_standup = event.category == EventRole.STANDUP_SHOW
+    is_sold_out = bool(is_standup and cap is not None and reserved_count >= cap)
+
+    performers = []
+    for ep in event.performers.all():
+        u = User.query.get(ep.user_id)
+        if u:
+            performers.append({
+                "id": u.id,
+                "username": u.username,
+                "firstName": u.firstName,
+                "lastName": u.lastName,
+            })
+
     return {
         "id": str(event.id),
         "name": event.name,
@@ -99,7 +116,11 @@ def _event_payload(event: Events):
         "startTime": event.startTime,
         "endTime": event.endTime,
         "createdAt": event.createdAt.isoformat() if getattr(event, "createdAt", None) else None,
-        "signupCount": event.signupList.count() if event.signupList is not None else 0,
+        "signupCount": reserved_count,
+        "reservedCount": reserved_count,
+        "reservationCap": cap,
+        "isSoldOut": is_sold_out,
+        "performers": performers,
     }
 
 
@@ -183,6 +204,44 @@ def api_me():
     if not user:
         return jsonify({"detail": "User not found."}), 404
     return jsonify(_user_payload(user)), 200
+
+@app.route("/api/users/search", methods=["GET"])
+@jwt_required()
+def api_users_search():
+    q = (request.args.get("q") or "").strip().lower()
+    role_arg = (request.args.get("role") or "").strip().upper()
+    try:
+        limit = max(1, min(int(request.args.get("limit", 20)), 50))
+    except (TypeError, ValueError):
+        limit = 20
+
+    query = User.query
+    if role_arg in ("COMIC", "COMEDIAN"):
+        query = query.filter(User.role == user_roles.COMIC)
+    elif role_arg == "STANDARD_USER":
+        query = query.filter(User.role == user_roles.STANDARD_USER)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            database.or_(
+                database.func.lower(User.username).like(like),
+                database.func.lower(User.firstName).like(like),
+                database.func.lower(User.lastName).like(like),
+            )
+        )
+
+    users = query.limit(limit).all()
+    return jsonify([
+        {
+            "id": u.id,
+            "username": u.username,
+            "firstName": u.firstName,
+            "lastName": u.lastName,
+        }
+        for u in users
+    ]), 200
+
 
 @app.route("/api/users/<int:user_id>", methods=["GET"])
 def api_user_profile(user_id):
@@ -400,6 +459,21 @@ def api_events_create():
     else:
         event_lat, event_lon = venue.latitude, venue.longitude
 
+    reservation_cap = body.get("reservationCap")
+    if reservation_cap is not None:
+        try:
+            reservation_cap = int(reservation_cap)
+            if reservation_cap < 1:
+                return jsonify({"detail": "Reservation cap must be at least 1."}), 400
+        except (TypeError, ValueError):
+            return jsonify({"detail": "Reservation cap must be a number."}), 400
+    if enum_category != EventRole.STANDUP_SHOW:
+        reservation_cap = None
+
+    performer_ids = body.get("performerIds") or []
+    if enum_category != EventRole.STANDUP_SHOW:
+        performer_ids = []
+
     new_event = Events(
         name=event_name,
         description=description,
@@ -414,12 +488,22 @@ def api_events_create():
         organizer=user_id,
         startTime=start_time,
         endTime=end_time,
+        reservationCap=reservation_cap,
     )
 
     try:
         database.session.add(new_event)
+        database.session.flush()
+        for pid in performer_ids:
+            try:
+                pid_int = int(pid)
+            except (TypeError, ValueError):
+                continue
+            if User.query.get(pid_int):
+                database.session.add(EventPerformer(event_id=new_event.id, user_id=pid_int))
         database.session.commit()
     except Exception as e:
+        database.session.rollback()
         return jsonify({"detail": str(e)}), 400
 
     return jsonify({"event": _event_payload(new_event)}), 201
@@ -443,9 +527,12 @@ def api_event_delete(event_id):
     if event.organizer != user_id:
         return jsonify({"detail": "Unauthorized to delete this event."}), 403
     try:
+        signup_List.query.filter_by(event=event_id).delete(synchronize_session=False)
+        EventPerformer.query.filter_by(event_id=event_id).delete(synchronize_session=False)
         database.session.delete(event)
         database.session.commit()
     except Exception as e:
+        database.session.rollback()
         return jsonify({"detail": str(e)}), 400
     return jsonify({"ok": True}), 200
 
@@ -474,9 +561,48 @@ def api_event_update(event_id):
         if k in body and body.get(k) is not None:
             setattr(event, k, body.get(k))
 
+    if "reservationCap" in body:
+        new_cap = body.get("reservationCap")
+        if event.category != EventRole.STANDUP_SHOW:
+            event.reservationCap = None
+        elif new_cap is None or new_cap == "":
+            event.reservationCap = None
+        else:
+            try:
+                new_cap = int(new_cap)
+            except (TypeError, ValueError):
+                return jsonify({"detail": "Reservation cap must be a number."}), 400
+            if new_cap < 1:
+                return jsonify({"detail": "Reservation cap must be at least 1."}), 400
+            current_reserved = event.signupList.count() if event.signupList is not None else 0
+            current_cap = event.reservationCap
+            if current_cap is not None and new_cap < current_cap and new_cap < current_reserved:
+                return jsonify({
+                    "detail": f"Can't lower cap below current reservations ({current_reserved})."
+                }), 400
+            if current_cap is not None and new_cap < current_cap:
+                return jsonify({
+                    "detail": "Reservation cap can only be raised, not lowered."
+                }), 400
+            event.reservationCap = new_cap
+
+    if "performerIds" in body and event.category == EventRole.STANDUP_SHOW:
+        ids = body.get("performerIds") or []
+        normalized = []
+        for pid in ids:
+            try:
+                normalized.append(int(pid))
+            except (TypeError, ValueError):
+                continue
+        EventPerformer.query.filter_by(event_id=event.id).delete()
+        for pid in normalized:
+            if User.query.get(pid):
+                database.session.add(EventPerformer(event_id=event.id, user_id=pid))
+
     try:
         database.session.commit()
     except Exception as e:
+        database.session.rollback()
         return jsonify({"detail": str(e)}), 400
 
     return jsonify({"event": _event_payload(event)}), 200
@@ -530,6 +656,11 @@ def api_event_signup(event_id):
     if existing:
         return jsonify({"ok": True}), 200
 
+    if event.category == EventRole.STANDUP_SHOW and event.reservationCap is not None:
+        reserved = event.signupList.count() if event.signupList is not None else 0
+        if reserved >= event.reservationCap:
+            return jsonify({"detail": "This show is sold out."}), 409
+
     try:
         user = User.query.get(user_id)
         if user:
@@ -537,6 +668,7 @@ def api_event_signup(event_id):
         database.session.add(signup_List(name=user_id, event=event_id))
         database.session.commit()
     except Exception as e:
+        database.session.rollback()
         return jsonify({"detail": str(e)}), 400
 
     return jsonify({"ok": True}), 200
