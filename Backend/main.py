@@ -10,13 +10,19 @@ from Location.routes import location_bp
 from Location.geocoder import Geocoder
 from Location.matching_service import MatchingService
 from Location.distance_service import DistanceService
-import requests
+from Recommend.recommendation_routes import recommend_bp
+from Recommend.onboarding_routes import onboarding_bp
+from Recommend.event_humor_routes import event_humor_bp
+
 
 geocoder = Geocoder(api_key="69cc5ed34ef27252477349axzad0499")
 distance_service = DistanceService()
 matcher = MatchingService(distance_service)
 app.register_blueprint(location_bp, url_prefix="/location")
 jwt = JWTManager(app)
+app.register_blueprint(recommend_bp, url_prefix="/api/recommend")
+app.register_blueprint(onboarding_bp, url_prefix="/api/onboarding")
+app.register_blueprint(event_humor_bp, url_prefix="/api/events")
 
 # Serve the built React app (single origin with the API)
 @app.route("/", defaults={"path": ""})
@@ -103,7 +109,7 @@ def _event_payload(event: Events):
 def api_register():
     data = request.get_json() or {}
 
-    # accept either {username} or legacy {userName}
+
     username = data.get("username") or data.get("userName")
     firstName = data.get("firstName")
     lastName = data.get("lastName")
@@ -124,7 +130,6 @@ def api_register():
     try:
         lat, lon = geocoder.geocode(full_address)
     except Exception:
-        # fall back: allow account creation even if geocoding fails
         lat, lon = 0.0, 0.0
 
     newUser = User(
@@ -187,7 +192,7 @@ def api_user_profile(user_id):
     if not user:
         return jsonify({"detail": "User not found"}), 404
     
-    # Return public user information (exclude sensitive data like email)
+    
     return jsonify({
         "id": user.id,
         "role": int(user.role) if user.role is not None else None,
