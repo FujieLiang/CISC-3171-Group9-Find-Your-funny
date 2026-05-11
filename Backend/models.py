@@ -143,7 +143,9 @@ class Events(database.Model):
     startTime = database.Column(database.String(40), nullable = False)
     endTime = database.Column(database.String(40), nullable = False)
     createdAt = database.Column(database.DateTime, default=datetime.utcnow)
+    reservationCap = database.Column(database.Integer, nullable=True)
     signupList = database.relationship('signup_List', backref='signups', lazy='dynamic')
+    performers = database.relationship('EventPerformer', backref='event', lazy='dynamic', cascade='all, delete-orphan')
 
     def to_json(self):
         return{
@@ -167,89 +169,9 @@ class signup_List(database.Model):
     id = database.Column(database.Integer, primary_key= True)
     name = database.Column(database.Integer, database.ForeignKey('users.id'), nullable = False)
     event = database.Column(database.Integer, database.ForeignKey('events.id'), nullable = False)
-        backref = 'followers'
-    )
 
-    def to_json(self):
-        return{
-            "username": self.username,
-            "firstName": self.firstName,
-            "lastName": self.lastName,
-            "email": self.email,
-            "streetAddress": self.streetAddress,
-            "city": self.city,
-            "state": self.state,
-            "country": self.country,
-            "zipCode": self.zipCode,
-            "latitude": self.latitude,
-            "longitude": self.longitude
-        }
 
-class Venue(database.Model):
-    __tablename__ = 'venues'
-    id = database.Column(database.Integer, primary_key=True)
-    streetAddress = database.Column(database.String(100), nullable = False)
-    city = database.Column(database.String(50), nullable = False)
-    state = database.Column(database.String(50), nullable = False)
-    country = database.Column(database.String(50), nullable = False)
-    zipCode = database.Column(database.Integer, nullable = False)
-    latitude = database.Column(database.Float, nullable = False)
-    longitude = database.Column(database.Float, nullable = False)
-
-    def to_json(self):
-        return{
-            "streetAddress": self.streetAddress,
-            "city": self.city,
-            "state": self.state,
-            "country": self.country,
-            "zipCode": self.zipCode,
-            "latitude": self.latitude,
-            "longitude": self.longitude
-        }
-
-class EventRole(enum.IntEnum):
-    STANDUP_SHOW = 1
-    IMPROV_SHOW = 2
-    OPEN_MIC = 3
-
-class Events(database.Model):
-    __tablename__ = 'events'
-    id = database.Column(database.Integer, primary_key=True)
-    name = database.Column(database.String(50), nullable = False)
-    description = database.Column(database.String(50), nullable = False)
-    category = database.Column(database.Enum(EventRole), nullable = False)
-    streetAddress = database.Column(database.String(100), nullable = False)
-    city = database.Column(database.String(50), nullable = False)
-    state = database.Column(database.String(50), nullable = False)
-    country = database.Column(database.String(50), nullable = False)
-    zipCode = database.Column(database.Integer, nullable = False)
-    latitude = database.Column(database.Float, nullable = False)
-    longitude = database.Column(database.Float, nullable = False)
-    organizer = database.Column(database.Integer, database.ForeignKey('users.id'), nullable = False)
-    startTime = database.Column(database.String(40), nullable = False)
-    endTime = database.Column(database.String(40), nullable = False)
-    createdAt = database.Column(database.DateTime, default=datetime.utcnow)
-    signupList = database.relationship('signup_List', backref='signups', lazy='dynamic')
-
-    def to_json(self):
-        return{
-            "name": self.name,
-            "description": self.description,
-            "category": self.category.name if self.category else None,
-            "streetAddress": self.streetAddress,
-            "city": self.city,
-            "state": self.state,
-            "country": self.country,
-            "zipCode": self.zipCode,
-            "latitude": self.latitude,
-            "longitude": self.longitude,
-            "organizer": self.organizer,
-            "startTime": self.startTime,
-            "endTime": self.endTime
-        }
-
-class signup_List(database.Model):
-    __tablename__ = 'signup_list'
-    id = database.Column(database.Integer, primary_key= True)
-    name = database.Column(database.Integer, database.ForeignKey('users.id'), nullable = False)
-    event = database.Column(database.Integer, database.ForeignKey('events.id'), nullable = False)
+class EventPerformer(database.Model):
+    __tablename__ = 'event_performers'
+    event_id = database.Column(database.Integer, database.ForeignKey('events.id'), primary_key=True)
+    user_id = database.Column(database.Integer, database.ForeignKey('users.id'), primary_key=True)
