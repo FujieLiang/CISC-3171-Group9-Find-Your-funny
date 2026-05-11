@@ -96,6 +96,8 @@ export default function EventDetail() {
   );
 
   const isOrganizer = user && user.id === event.organizer;
+  const isStandup = event.category === "STANDUP";
+  const performers = event.performers || [];
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -171,19 +173,29 @@ export default function EventDetail() {
                 <div className="font-heading text-xl">{formatDT(event.startTime)}</div>
               </div>
               <div>
-                <div className="font-mono-accent text-[10px] uppercase tracking-[0.25em] text-stark/60">Signups</div>
-                <div className="font-heading text-xl">{event.signupCount || 0}</div>
+                <div className="font-mono-accent text-[10px] uppercase tracking-[0.25em] text-stark/60">
+                  {isStandup ? "Reservations" : "Signups"}
+                </div>
+                <div className="font-heading text-xl">
+                  {isStandup && event.reservationCap != null
+                    ? `${event.reservedCount ?? 0} / ${event.reservationCap}`
+                    : (event.signupCount ?? event.reservedCount ?? 0)}
+                </div>
               </div>
             </div>
             <div className="mt-6 space-y-3">
               {!isOrganizer && (
-                signedUp ? (
+                event.isSoldOut && !signedUp ? (
+                  <div className="w-full border-2 border-stark bg-stark text-cream px-4 py-3 font-accent text-sm uppercase tracking-[0.25em] text-center" data-testid="event-sold-out">
+                    Sold Out
+                  </div>
+                ) : signedUp ? (
                   <button onClick={onCancel} disabled={busy} className="w-full marquee-btn-light inline-flex items-center justify-center gap-2" data-testid="event-cancel-signup">
-                    <XCircle className="w-4 h-4" strokeWidth={2.5} /> Cancel Signup
+                    <XCircle className="w-4 h-4" strokeWidth={2.5} /> {isStandup ? "Cancel Reservation" : "Cancel Signup"}
                   </button>
                 ) : (
                   <button onClick={onSignup} disabled={busy} className="w-full marquee-btn inline-flex items-center justify-center gap-2" data-testid="event-signup-button">
-                    <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} /> {user ? "Get on the List" : "Login to Sign Up"}
+                    <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} /> {user ? (isStandup ? "Reserve a Spot" : "Get on the List") : "Login to Sign Up"}
                   </button>
                 )
               )}
@@ -199,12 +211,34 @@ export default function EventDetail() {
           </aside>
         </div>
 
+        {isStandup && performers.length > 0 && (
+          <div className="px-8 py-6 border-t-2 border-stark">
+            <div className="font-mono-accent text-[10px] tracking-[0.3em] uppercase text-oxblood">Tonight's Lineup</div>
+            <h2 className="font-heading text-2xl mt-1">On the bill.</h2>
+            <ul className="mt-4 grid sm:grid-cols-2 gap-3">
+              {performers.map((p) => (
+                <li key={p.id} data-testid={`performer-row-${p.id}`}>
+                  <Link to={`/profile/${p.id}`} className="flex items-center gap-3 hover:bg-marigold/10 -mx-2 px-2 py-1.5 transition-colors">
+                    <div className="w-9 h-9 bg-oxblood/15 border border-oxblood/50 text-oxblood flex items-center justify-center font-accent">
+                      {(p.firstName?.[0] || p.username?.[0] || "?").toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-sub text-base leading-none">{p.firstName} {p.lastName}</div>
+                      <div className="font-mono-accent text-[10px] uppercase tracking-[0.2em] text-stark/60 mt-1">@{p.username}</div>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="px-8 py-6 border-t-2 border-stark">
-          <h2 className="font-heading text-2xl">Signup List</h2>
+          <h2 className="font-heading text-2xl">{isStandup ? "Reservation List" : "Signup List"}</h2>
           {signups === null ? (
             <p className="font-mono-accent text-xs uppercase tracking-wider mt-2">Loading…</p>
           ) : signups.length === 0 ? (
-            <p className="font-sub italic text-stark/70 mt-2">Nobody yet. The mic is quiet.</p>
+            <p className="font-sub italic text-stark/70 mt-2">{isStandup ? "No reservations yet. Seats are open." : "Nobody yet. The mic is quiet."}</p>
           ) : (
             <ul className="mt-3 divide-y-2 divide-dashed divide-stark/30">
               {signups.map((s) => (
