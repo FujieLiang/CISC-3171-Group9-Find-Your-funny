@@ -1,11 +1,16 @@
 import { useEffect, useState, useMemo } from "react";
 import { api, formatApiError } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import EventCard from "@/components/EventCard";
 import CategoryTabs from "@/components/CategoryTabs";
 import { Loader2 } from "lucide-react";
 
+const RECOMMEND_THRESHOLD = 0.9;
+
 export default function Events() {
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
+  const [scores, setScores] = useState({});
   const [category, setCategory] = useState("ALL");
   const [q, setQ] = useState("");
   const [city, setCity] = useState("");
@@ -20,8 +25,13 @@ export default function Events() {
       if (category !== "ALL") params.category = category;
       if (q.trim()) params.q = q.trim();
       if (city.trim()) params.city = city.trim();
-      const { data } = await api.get("/events", { params });
-      setEvents(data);
+
+      const requests = [api.get("/events", { params })];
+      if (user) requests.push(api.get("/events/recommendations/me"));
+      const [eventsRes, recRes] = await Promise.all(requests);
+
+      setEvents(eventsRes.data);
+      setScores(recRes?.data?.scores || {});
     } catch (e) {
       setError(formatApiError(e));
     } finally {
@@ -29,9 +39,19 @@ export default function Events() {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [category]);
+  useEffect(() => { load(); }, [category, user?.id]);
 
-  const grouped = useMemo(() => events, [events]);
+  const grouped = useMemo(() => {
+    const decorated = events.map((e) => {
+      const match = scores[Number(e.id)] || scores[e.id];
+      return {
+        ...e,
+        matchScore: match?.score ?? null,
+        recommended: match ? match.score >= RECOMMEND_THRESHOLD : false,
+      };
+    });
+    return decorated.sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1));
+  }, [events, scores]);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
