@@ -8,8 +8,8 @@ from Recommend.comedian_service import comedian_raw_vector
 
 onboarding_bp = Blueprint("onboarding", __name__)
 
-SWIPE_SET_SIZE = 10
-PASS_WEIGHT = 0.3
+SWIPE_SET_SIZE = 20
+PASS_WEIGHT = 0.4
 
 
 def _comedian_payload(comedian):
