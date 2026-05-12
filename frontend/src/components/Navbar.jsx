@@ -49,6 +49,7 @@ export default function Navbar() {
         <nav className="hidden md:flex items-center gap-1">
           <NavLink to="/events" className={linkClass} data-testid="nav-events">Browse</NavLink>
           <NavLink to="/near-me" className={linkClass} data-testid="nav-nearme">Near Me</NavLink>
+          {user && <NavLink to="/feed" className={linkClass} data-testid="nav-feed">Feed</NavLink>}
           {user && <NavLink to="/profile" className={linkClass} data-testid="nav-profile">My Profile</NavLink>}
         </nav>
 
@@ -103,6 +104,7 @@ export default function Navbar() {
           <div className="px-4 py-4 flex flex-col gap-1" onClick={() => setOpen(false)}>
             <NavLink to="/events" className="py-2.5 font-sans text-sm font-medium text-stark" data-testid="mobile-nav-events">Browse</NavLink>
             <NavLink to="/near-me" className="py-2.5 font-sans text-sm font-medium text-stark" data-testid="mobile-nav-nearme">Near Me</NavLink>
+            {user && <NavLink to="/feed" className="py-2.5 font-sans text-sm font-medium text-stark" data-testid="mobile-nav-create">Feed</NavLink>}
             {user && <NavLink to="/create-event" className="py-2.5 font-sans text-sm font-medium text-stark" data-testid="mobile-nav-create">Post Show</NavLink>}
             {user && <NavLink to="/profile" className="py-2.5 font-sans text-sm font-medium text-stark" data-testid="mobile-nav-profile">My Bills</NavLink>}
             <div className="hairline my-2" />
