@@ -5,7 +5,7 @@ import EventCard from "@/components/EventCard";
 import CategoryTabs from "@/components/CategoryTabs";
 import { Loader2 } from "lucide-react";
 
-const RECOMMEND_THRESHOLD = 0.9;
+const RECOMMEND_THRESHOLD = 0.2;
 
 export default function Events() {
   const { user } = useAuth();
