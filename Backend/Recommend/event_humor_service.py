@@ -1,6 +1,6 @@
 from models import UserHumorProfile, signup_List
 from Recommend.humor_profile_service import average_vectors
-from Recommend.similarity import cosine_similarity
+from Recommend.similarity import pearson_correlation
 
 
 def match_scores_for_user(user_id):
@@ -33,7 +33,7 @@ def match_scores_for_user(user_id):
             continue
         audience = average_vectors(vectors)
         scores[event_id] = {
-            "score": round(cosine_similarity(user_vector, audience), 4),
+            "score": round(pearson_correlation(user_vector, audience), 4),
             "sampleSize": len(vectors),
         }
 
