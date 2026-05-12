@@ -734,10 +734,68 @@ def api_nearby_public():
     by_id = {event.id: event for event in events}
     return jsonify([_event_payload(by_id[i]) for i in ids if i in by_id]), 200
 
+@app.route("/api/feed", methods=["GET"])
+@jwt_required()
+def api_feed():
+    user_id = int(get_jwt_identity())
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"detail": "User not found."}), 404
+
+    following_ids = user.following
+
+    if not following_ids:
+        return jsonify([]), 200
+
+    feed_events = []
+    visited_ids = []
+
+    for followed in following_ids:
+
+        # to get events created by followed users
+        their_created_events = Events.query.filter_by(organizer=followed.id).all()
+        for event in their_created_events:
+            if event.id not in visited_ids:
+                visited_ids.append(event.id)
+                feed_events.append(event)
+
+        # to get events followed users  signed up for
+        their_signups = signup_List.query.filter_by(name=followed.id).all()
+        for signup in their_signups:
+            event = Events.query.get(signup.event)
+            if event and event.id not in visited_ids:
+                visited_ids.append(event.id)
+                feed_events.append(event)
+
+    result = []
+    for event in feed_events:
+        result.append(_event_payload(event))
+
+    
+    return jsonify(result), 200
+        
+@app.route("/api/members", methods=["GET"])
+def api_members():
+    all_users = User.query.all()
+    result = []
+    for user in all_users:
+        result.append({
+            "id": user.id,
+            "username": user.username,
+            "firstName": user.firstName,
+            "lastName": user.lastName,
+            "city": user.city,
+            "state": user.state,
+            "role": int(user.role) if user.role is not None else None,
+        })
+    return jsonify(result), 200
+
 
 @jwt.token_in_blocklist_loader
 def check_if_token_revoked(jwt_header, jwt_payload):
     return jwt_payload["jti"] in blacklist
+
 
 
 if __name__ == "__main__":
@@ -750,3 +808,5 @@ if __name__ == "__main__":
         debug=True,
         use_reloader=False,
     )
+
+

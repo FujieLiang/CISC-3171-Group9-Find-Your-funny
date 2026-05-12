@@ -12,6 +12,8 @@ import CreateEvent from "@/pages/CreateEvent";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import UserProfile from "@/pages/UserProfile";
+import Feed from "@/pages/Feed";
+import Members from "@/pages/Members";
 
 function AppRoutes() {
   const { user: currentUser } = useAuth();
@@ -28,6 +30,8 @@ function AppRoutes() {
       <Route path="/profile" element={<Navigate to="/me" />} />
       <Route path="/profile/:id" element={<UserProfile />} />
       <Route path="/me" element={currentUser ? <Protected><Navigate to={`/profile/${currentUser.id}`} /></Protected> : <Navigate to="/login" />} />
+      <Route path="/feed" element={<Protected><Feed/></Protected>} />
+      <Route path="/members" element={<Protected><Members/></Protected>} />
     </Routes>
   );
 }
