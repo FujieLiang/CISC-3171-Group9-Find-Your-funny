@@ -775,6 +775,21 @@ def api_feed():
     
     return jsonify(result), 200
         
+@app.route("/api/members", methods=["GET"])
+def api_members():
+    all_users = User.query.all()
+    result = []
+    for user in all_users:
+        result.append({
+            "id": user.id,
+            "username": user.username,
+            "firstName": user.firstName,
+            "lastName": user.lastName,
+            "city": user.city,
+            "state": user.state,
+            "role": int(user.role) if user.role is not None else None,
+        })
+    return jsonify(result), 200
 
 
 @jwt.token_in_blocklist_loader
