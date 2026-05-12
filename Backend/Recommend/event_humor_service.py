@@ -1,6 +1,5 @@
-from models import UserHumorProfile,Comedian,signup_List
+from models import UserHumorProfile, signup_List
 from Recommend.humor_profile_service import average_vectors
-from Recommend.comedian_service import comedian_raw_vector
 from Recommend.similarity import cosine_similarity
 
 
