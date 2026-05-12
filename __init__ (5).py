@@ -1,0 +1,458 @@
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { api, formatApiError } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import EventCard from "@/components/EventCard";
+import { Mic, Plus, Ticket, User, Sparkles, UserPlus } from "lucide-react";
+
+export default function UserProfile() {
+  const { id } = useParams();
+  const { user: currentUser } = useAuth();
+  const [profileUser, setProfileUser] = useState(null);
+ 
+  const [tab, setTab] = useState("created");
+  const [created, setCreated] = useState([]);
+  const [signed, setSigned] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recsLoading, setRecsLoading] = useState(false);
+
+  const isOwnProfile = currentUser && Number(id) === currentUser.id;
+
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await api.get(`/users/${id}`);
+        setProfileUser(res.data);
+      } catch (e) {
+        setError(formatApiError(e));
+        setLoading(false);
+      }
+    })();
+  }, [id]);
+
+  useEffect(() => {
+    if (!profileUser) return;
+
+    (async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [a, b, c, d] = await Promise.all([
+          api.get(`/users/${id}/events/created`),
+          api.get(`/users/${id}/events/signedup`),
+          api.get(`/users/${id}/followers`),
+          api.get(`/users/${id}/following`),
+        ]);
+        setCreated(a.data);
+        setSigned(b.data);
+        setFollowers(c.data);
+        setFollowing(d.data);
+      } catch (e) { setError(formatApiError(e)); }
+      finally { setLoading(false); }
+    })();
+  }, [profileUser, id, isOwnProfile]);
+
+  const loadRecommendations = async () => {
+    setRecsLoading(true);
+    try {
+      const { data } = await api.get("/recommend/users", { params: { limit: 6 } });
+      setRecommendations(data.recommendations || []);
+    } catch {
+      setRecommendations([]);
+    } finally {
+      setRecsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOwnProfile && tab === "following") loadRecommendations();
+    // eslint-disable-next-line
+  }, [isOwnProfile, tab, following.length]);
+
+  const onFollowedRecommendation = (recId) => {
+    setRecommendations((arr) => arr.filter((r) => r.id !== recId));
+    const promoted = recommendations.find((r) => r.id === recId);
+    if (promoted) {
+      setFollowing((arr) => [
+        ...arr,
+        { id: promoted.id, username: promoted.username, firstName: promoted.firstName, lastName: promoted.lastName },
+      ]);
+    }
+  };
+
+  if (!currentUser) {
+    return (
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="font-mono-accent text-sm uppercase tracking-wider text-stark/70">
+          Please log in to view profiles.
+        </div>
+      </main>
+    );
+  }
+
+  if (!id) {
+    return (
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="font-mono-accent text-sm uppercase tracking-wider text-stark/70">
+          Invalid profile URL.
+        </div>
+      </main>
+    );
+  }
+
+  if (!profileUser) {
+    return (
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {error ? (
+          <div className="border border-destructive/60 bg-destructive/10 text-destructive px-4 py-3 font-mono-accent text-sm">
+            {error}
+          </div>
+        ) : (
+          <div className="font-mono-accent text-sm uppercase tracking-wider text-stark/70">
+            Loading…
+          </div>
+        )}
+      </main>
+    );
+  }
+
+  const list = tab === "created" ? created : tab === "signed" ? signed : [];
+
+  return (
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="font-mono-accent text-[11px] tracking-[0.3em] uppercase text-oxblood">
+            The Playbill
+          </div>
+
+          {isOwnProfile ? (
+            <h1 className="font-heading text-5xl md:text-6xl mt-1">
+              Hey, {profileUser.firstName}.
+            </h1>
+          ) : (
+            <h1 className="font-heading text-5xl md:text-6xl mt-1">
+              {profileUser.firstName} {profileUser.lastName}
+            </h1>
+          )}
+
+          <p className="font-sub italic text-lg mt-2 text-stark/70">
+            @{profileUser.username} · {profileUser.city}, {profileUser.state}
+          </p>
+        </div>
+
+        {isOwnProfile ? (
+          <Link to="/create-event" className="marquee-btn inline-flex items-center gap-2">
+            <Plus className="w-5 h-5" strokeWidth={2.5} /> New Show
+          </Link>
+        ) : (
+          <FollowButton targetUserId={profileUser.id} />
+        )}
+      </header>
+
+      <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <StatTile label="Shows hosted" value={created.length} Icon={Mic} />
+        <StatTile label="On the list" value={signed.length} Icon={Ticket} />
+        <StatTile label="Role" value={profileUser.role === 2 ? "Comic" : "Fan"} Icon={User} />
+        <FollowersTile count ={followers.length} isOwnProfile = {isOwnProfile} expanded = {showFollowers} onToggle ={() => setShowFollowers((s) => !s)}/>
+      </div>
+
+      {isOwnProfile && showFollowers && (
+        <div className="ticket-card p-5 mb-6">
+          <div className="font-mono-accent text-[10px] uppercase tracking-[0.25em] text-stark/60 mb-3">
+            Your Followers
+          </div>
+          {followers.length === 0 ? (
+            <p className="font-sub italic text-stark/70">Nobody yet. Build a following.</p>
+          ) : (
+            <ul className="grid sm:grid-cols-2 gap-2">
+              {followers.map((u) => (
+                <li key={u.id}>
+                <Link to={`/profile/${u.id}`} className="block px-3 py-2 hover:bg-marigold/10 transition-colors">
+                  <div className="font-sub text-base leading-none">{u.firstName} {u.lastName}</div>
+                  <div className="font-mono-accent text-[10px] uppercase tracking-[0.2em] text-stark/60 mt-1">
+                  @{u.username}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )}
+
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={() => setTab("created")}
+          className={`chip ${tab === "created" ? "chip-active" : ""}`}
+        >
+          <Mic className="w-3.5 h-3.5" strokeWidth={2.5} /> 
+          {isOwnProfile ? "My Shows" : "Their Shows"}
+        </button>
+
+        <button
+          onClick={() => setTab("signed")}
+          className={`chip ${tab === "signed" ? "chip-active" : ""}`}
+        >
+          <Ticket className="w-3.5 h-3.5" strokeWidth={2.5} />
+          {isOwnProfile ? "Signed Up" : "They Signed Up"}
+        </button>
+
+        <button
+          onClick={() => setTab("following")}
+          className={`chip ${tab === "following" ? "chip-active" : ""}`}
+        >
+          <User className="w-3.5 h-3.5" strokeWidth={2.5} />
+          Following
+        </button>
+      </div>
+
+      {error && (
+        <div className="border border-destructive/60 bg-destructive/10 text-destructive px-4 py-3 font-mono-accent text-sm mb-6">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="font-mono-accent text-sm uppercase tracking-wider text-stark/70">
+          Loading…
+        </div>
+      ) : tab === "following" ? (
+        <>
+          {following.length === 0 ? (
+            <div className="ticket-card p-10 text-center">
+              <h3 className="font-heading text-3xl">
+                {isOwnProfile ? "You aren’t following anyone yet." : "Not following anyone yet."}
+              </h3>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {following.map((u) => (
+                <Link
+                  key={u.id}
+                  to={`/profile/${u.id}`}
+                  className="ticket-card p-4 flex items-center gap-3 hover:bg-marigold/10 transition-colors"
+                >
+                  <div className="w-10 h-10 bg-oxblood/15 border border-oxblood/50 text-oxblood flex items-center justify-center font-accent">
+                    {(u.firstName?.[0] || u.username?.[0] || "?").toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="font-sub text-base leading-none">{u.firstName} {u.lastName}</div>
+                    <div className="font-mono-accent text-[10px] uppercase tracking-[0.2em] text-stark/60 mt-1">
+                      @{u.username}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {isOwnProfile && (
+            <section className="mt-10">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <div className="font-mono-accent text-[10px] tracking-[0.25em] uppercase text-oxblood flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3" strokeWidth={2.5} />
+                    Recommended For You
+                  </div>
+                  <h2 className="font-heading text-3xl mt-1">People You'd Vibe With</h2>
+                  <p className="font-sub italic text-stark/70 text-sm mt-1">
+                    Based on your humor profile, you haven't followed these folks yet.
+                  </p>
+                </div>
+              </div>
+
+              {recsLoading ? (
+                <div className="font-mono-accent text-sm uppercase tracking-wider text-stark/70">
+                  Scouting the lineup…
+                </div>
+              ) : recommendations.length === 0 ? (
+                <div className="ticket-card p-6 text-center font-sub italic text-stark/70">
+                  No fresh recommendations right now. Sign up for shows or follow more comics to seed the algorithm.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {recommendations.map((u) => (
+                    <RecommendedFollowCard
+                      key={u.id}
+                      user={u}
+                      onFollowed={() => onFollowedRecommendation(u.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+        </>
+      ) : list.length === 0 ? (
+        <div className="ticket-card p-10 text-center">
+          <h3 className="font-heading text-3xl">
+            {isOwnProfile
+              ? tab === "created"
+                ? "No shows on your playbill yet."
+                : "You haven’t signed up for anything."
+              : tab === "created"
+                ? "No shows yet."
+                : "No signups yet."}
+          </h3>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {list.map((e, i) => (
+            <EventCard key={e.id} event={e} index={i} />
+          ))}
+        </div>
+      )}
+    </main>
+  );
+}
+
+function StatTile({ label, value, Icon }) {
+  return (
+    <div className="ticket-card p-4 flex items-center gap-3">
+      <div className="w-10 h-10 bg-marigold/15 border border-marigold/50 flex items-center justify-center">
+        <Icon className="w-5 h-5 text-stark" strokeWidth={2.5} />
+      </div>
+      <div>
+        <div className="font-mono-accent text-[10px] uppercase tracking-[0.25em] text-stark/60">
+          {label}
+        </div>
+        <div className="font-heading text-2xl leading-none mt-1">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function FollowersTile({ count, isOwnProfile, expanded, onToggle }) {
+  const inner = (
+    <>
+      <div className="w-10 h-10 bg-marigold/15 border border-marigold/50 flex items-center justify-center">
+        <User className="w-5 h-5 text-stark" strokeWidth={2.5} />
+      </div>
+      <div>
+        <div className="font-mono-accent text-[10px] uppercase tracking-[0.25em] text-stark/60">
+          Followers
+        </div>
+        <div className="font-heading text-2xl leading-none mt-1">{count}</div>
+      </div>
+    </>
+  );
+
+  if (!isOwnProfile) {
+    return <div className="ticket-card p-4 flex items-center gap-3">{inner}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`ticket-card p-4 flex items-center gap-3 text-left w-full transition-colors ${
+        expanded ? "bg-marigold/10" : "hover:bg-marigold/5"
+      }`}
+      aria-expanded={expanded}
+    >
+      {inner}
+    </button>
+  );
+}
+
+function RecommendedFollowCard({ user, onFollowed }) {
+  const [busy, setBusy] = useState(false);
+  const matchPct = typeof user.similarity === "number" ? Math.round(user.similarity * 100) : null;
+
+  const follow = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (busy) return;
+    setBusy(true);
+    try {
+      await api.post("/follow", { targetUserId: user.id });
+      onFollowed?.();
+    } catch {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Link
+      to={`/profile/${user.id}`}
+      className="ticket-card p-4 flex items-center gap-3 hover:bg-marigold/10 transition-colors"
+    >
+      <div className="w-10 h-10 bg-oxblood/15 border border-oxblood/50 text-oxblood flex items-center justify-center font-accent">
+        {(user.firstName?.[0] || user.username?.[0] || "?").toUpperCase()}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="font-sub text-base leading-none truncate">{user.firstName} {user.lastName}</div>
+        <div className="font-mono-accent text-[10px] uppercase tracking-[0.2em] text-stark/60 mt-1 truncate">
+          @{user.username}
+          {matchPct !== null && <span className="text-oxblood ml-2">· {matchPct}% Match</span>}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={follow}
+        disabled={busy}
+        aria-label={`Follow ${user.username}`}
+        className="shrink-0 inline-flex items-center gap-1 px-2 py-1 border border-oxblood/60 bg-oxblood/10 text-oxblood hover:bg-oxblood/20 font-mono-accent text-[10px] tracking-[0.2em] uppercase transition-colors disabled:opacity-50"
+      >
+        <UserPlus className="w-3 h-3" strokeWidth={2.5} />
+        {busy ? "…" : "Follow"}
+      </button>
+    </Link>
+  );
+}
+
+function FollowButton({ targetUserId }) {
+  const [following, setFollowing] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get(`/users/${targetUserId}/follow-status`);
+        if (!cancelled) setFollowing(!!data.following);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [targetUserId]);
+
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      if (following) {
+        await api.delete("/follow", { data: { targetUserId } });
+        setFollowing(false);
+      } else {
+        await api.post("/follow", { targetUserId });
+        setFollowing(true);
+      }
+    } catch (e) {
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={busy}
+      className={following ? "marquee-btn-light" : "marquee-btn"}
+    >
+      {following ? "Unfollow" : "Follow"}
+    </button>
+  );
+}
+
+  
+
+
