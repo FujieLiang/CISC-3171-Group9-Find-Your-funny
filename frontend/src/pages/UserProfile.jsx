@@ -264,7 +264,7 @@ export default function UserProfile() {
                     <Sparkles className="w-3 h-3" strokeWidth={2.5} />
                     Recommended For You
                   </div>
-                  <h2 className="font-heading text-3xl mt-1">People You'd Vibe With</h2>
+                  <h2 className="font-heading text-3xl mt-1">Recommended Followers</h2>
                   <p className="font-sub italic text-stark/70 text-sm mt-1">
                     Based on your humor profile, you haven't followed these folks yet.
                   </p>
