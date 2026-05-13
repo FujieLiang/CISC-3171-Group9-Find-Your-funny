@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from config import database
 from models import Comedian, HUMOR_CATEGORIES, UserHumorProfile
-from Recommend.humor_profile_service import *
+from Recommend.humor_profile_service import average_vectors,default_vector,recompute_final_vector,save_quiz_vector 
 from Recommend.comedian_service import comedian_raw_vector
 
 onboarding_bp = Blueprint("onboarding", __name__)
