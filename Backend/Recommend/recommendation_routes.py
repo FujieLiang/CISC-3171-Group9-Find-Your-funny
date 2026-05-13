@@ -2,7 +2,6 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from models import User
-from Recommend.humor_profile_service import save_quiz_vector, recompute_final_vector
 from Recommend.recommendation_service import recommend_users_for
 
 recommend_bp = Blueprint("recommend", __name__)
