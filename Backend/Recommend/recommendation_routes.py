@@ -31,35 +31,3 @@ def recommend_users():
     })
 
 
-@recommend_bp.route("/profile/quiz", methods=["POST"])
-@jwt_required()
-def create_quiz_profile():
-    data = request.get_json() or {}
-    user_id = int(get_jwt_identity())
-    quiz_vector = data.get("quiz_vector")
-
-    if not quiz_vector:
-        return jsonify({"error": "quiz_vector is required"}), 400
-
-    save_quiz_vector(user_id, quiz_vector)
-
-    return jsonify({
-        "message": "Quiz vector saved",
-        "user_id": user_id,
-    })
-
-
-@recommend_bp.route("/profile/recompute", methods=["POST"])
-@jwt_required()
-def recompute_profile():
-    user_id = int(get_jwt_identity())
-    final_vector = recompute_final_vector(user_id)
-
-    if final_vector is None:
-        return jsonify({"error": "Humor profile not found"}), 404
-
-    return jsonify({
-        "message": "Final humor vector updated",
-        "user_id": user_id,
-        "final_vector": final_vector,
-    })
